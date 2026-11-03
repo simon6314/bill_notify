@@ -157,7 +157,8 @@ async function changeAmount(id, value) {
   const bill = state.bills.find(b => b.id === id);
   if (!bill) return;
   const amount = Number(value) || 0;
-  const paid = isPaid(bill);
+  // 金額為 0 代表這個月不用繳，自動勾選已繳納
+  const paid = amount === 0 ? true : isPaid(bill);
   state.payments[id] = { amount, paid };
   render();
   await savePayment(id, amount, paid);
@@ -240,7 +241,11 @@ async function submitBill(e) {
   if (!params.name) return;
   try {
     setStatus('儲存中…');
-    await api(params);
+    const saved = await api(params);
+    // 金額為 0：本月自動標記已繳納
+    if (Number(params.defaultAmount) === 0 && saved.id) {
+      await api({ action: 'setPayment', month: state.month, id: saved.id, amount: 0, paid: 'true' });
+    }
     resetForm();
     await loadMonth();
     setStatus('已儲存');
