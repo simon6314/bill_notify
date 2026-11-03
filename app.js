@@ -72,9 +72,10 @@ function daysUntil(date) {
   return Math.round((date - today) / 86400000);
 }
 
+// 該月份還沒有填過金額時回傳 null（顯示「未填」，不計入合計）
 function amountOf(bill) {
   const p = state.payments[bill.id];
-  return p ? p.amount : bill.defaultAmount;
+  return p ? p.amount : null;
 }
 function isPaid(bill) {
   const p = state.payments[bill.id];
@@ -86,8 +87,8 @@ function render() {
   let total = 0, paidTotal = 0, unpaidCount = 0;
   active.forEach(b => {
     const amt = amountOf(b);
-    total += amt;
-    if (isPaid(b)) paidTotal += amt; else unpaidCount++;
+    if (amt !== null) total += amt;
+    if (isPaid(b)) { if (amt !== null) paidTotal += amt; } else unpaidCount++;
   });
   $('summary').innerHTML = `
     <div><small>本月應繳</small><strong>${money(total)}</strong></div>
@@ -147,7 +148,8 @@ function renderBill(b) {
       <div class="bill-row">
         <div class="amount-wrap">
           <span>金額</span>
-          <input type="number" min="0" inputmode="numeric" value="${amountOf(b)}"
+          <input type="number" min="0" inputmode="numeric" placeholder="未填"
+            value="${amountOf(b) === null ? '' : amountOf(b)}"
             aria-label="${esc(b.name)} 金額"
             onchange="changeAmount('${esc(b.id)}', this.value)">
         </div>
@@ -162,6 +164,8 @@ function renderBill(b) {
 async function changeAmount(id, value) {
   const bill = state.bills.find(b => b.id === id);
   if (!bill) return;
+  // 清空金額：不寫入，還原為顯示「未填」
+  if (String(value).trim() === '') { render(); return; }
   const amount = Number(value) || 0;
   // 金額為 0 代表這個月不用繳，自動勾選已繳納
   const paid = amount === 0 ? true : isPaid(bill);
@@ -173,7 +177,7 @@ async function changeAmount(id, value) {
 async function togglePaid(id, paid) {
   const bill = state.bills.find(b => b.id === id);
   if (!bill) return;
-  const amount = amountOf(bill);
+  const amount = amountOf(bill) ?? 0;
   state.payments[id] = { amount, paid };
   render();
   await savePayment(id, amount, paid);
@@ -216,7 +220,6 @@ function editBill(id) {
   $('f-close').value = b.closeDay || '';
   $('f-due').value = b.dueDay || '';
   $('f-account').value = b.account;
-  $('f-default').value = b.defaultAmount || '';
   $('f-auto').checked = b.auto;
   $('f-note').value = b.note;
   $('manage').open = true;
@@ -239,7 +242,6 @@ async function submitBill(e) {
     closeDay: $('f-close').value,
     dueDay: $('f-due').value,
     account: $('f-account').value.trim(),
-    defaultAmount: $('f-default').value || 0,
     auto: String($('f-auto').checked),
     active: 'true',
     note: $('f-note').value.trim()
@@ -247,11 +249,7 @@ async function submitBill(e) {
   if (!params.name) return;
   try {
     setStatus('儲存中…');
-    const saved = await api(params);
-    // 金額為 0：本月自動標記已繳納
-    if (Number(params.defaultAmount) === 0 && saved.id) {
-      await api({ action: 'setPayment', month: state.month, id: saved.id, amount: 0, paid: 'true' });
-    }
+    await api(params);
     resetForm();
     await loadMonth();
     setStatus('已儲存');
