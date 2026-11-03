@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>花費統計</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=20261103_1220">
+</head>
+<body>
+  <header class="header">
+    <div>
+      <h1>📊 花費統計</h1>
+      <div class="header-sub"><a href="index.html">← 回帳單管理</a></div>
+    </div>
+    <div class="month-row">
+      <button id="modeMonth" class="chip active">月</button>
+      <button id="modeYear" class="chip">年</button>
+      <button id="prev" aria-label="上一期">‹</button>
+      <input type="month" id="pick" aria-label="選擇期間">
+      <button id="next" aria-label="下一期">›</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="status" class="status">載入中…</div>
+
+    <section class="stat-card">
+      <div class="pie-wrap">
+        <div id="pie" class="pie-box"></div>
+        <div class="total-box">
+          <small id="totalLabel"></small>
+          <strong id="total" class="total"></strong>
+          <small id="countLabel"></small>
+        </div>
+      </div>
+      <div id="legend" class="legend"></div>
+      <small class="note">金額以「已填寫」的繳費紀錄計算，包含尚未勾已繳的項目。</small>
+    </section>
+
+    <section>
+      <h2>各帳單花費</h2>
+      <div id="ranking" class="ranking"></div>
+    </section>
+  </main>
+
+  <script src="stats.js?v=20261103_1220"></script>
+</body>
+</html>

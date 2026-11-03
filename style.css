@@ -137,3 +137,30 @@ summary { cursor: pointer; font-weight: 600; color: var(--text2); padding: 8px 2
   background: var(--surface); border: 1px solid var(--border); color: var(--text2);
 }
 .chip.active { background: var(--btn); border-color: transparent; color: var(--btn-text); font-weight: 600; }
+
+/* ── 花費統計頁 ── */
+.header-sub a { color: var(--text3); text-decoration: none; }
+.chip { cursor: pointer; }
+.stat-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: 0 1px 2px rgba(15,23,42,0.04), 0 12px 28px -18px rgba(15,23,42,0.35);
+  padding: 18px; margin: 8px 0 18px; display: grid; gap: 14px;
+}
+.pie-wrap { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; justify-content: center; }
+.pie-box { width: 200px; height: 200px; flex: 0 0 200px; }
+.pie { width: 100%; height: 100%; display: block; }
+.total-box { display: grid; gap: 2px; text-align: left; }
+.total-box small { color: var(--text3); font-size: 13px; }
+.total { font-family: 'DM Mono', monospace; font-size: 26px; font-weight: 500; letter-spacing: -0.02em; }
+.legend { display: grid; gap: 8px; }
+.legend-row { display: grid; grid-template-columns: 14px 1fr auto auto; gap: 10px; align-items: center; font-size: 14px; }
+.legend-row .dot { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.legend-row .pct { color: var(--text3); font-family: 'DM Mono', monospace; font-size: 13px; }
+.legend-row strong { font-family: 'DM Mono', monospace; font-weight: 500; }
+.note { color: var(--text3); font-size: 12px; }
+.ranking { display: grid; gap: 10px; }
+.rank-row { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; display: grid; gap: 6px; }
+.rank-head { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; }
+.rank-head strong { font-family: 'DM Mono', monospace; font-weight: 500; }
+.rank-bar { height: 8px; background: var(--surface2); border-radius: 999px; overflow: hidden; }
+.rank-bar span { display: block; height: 100%; background: var(--btn); border-radius: 999px; }

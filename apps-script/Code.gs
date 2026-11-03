@@ -20,6 +20,7 @@ function handle(p) {
   ensureSheets();
   const action = p.action;
   if (action === 'list') return listData(p.month);
+  if (action === 'allPayments') return allPayments();
   if (action === 'saveBill') return withLock(() => saveBill(p));
   if (action === 'deleteBill') return withLock(() => deleteBill(p.id));
   if (action === 'setPayment') return withLock(() => setPayment(p));
@@ -88,6 +89,28 @@ function listData(month) {
     }
   });
   return { ok: true, month: month, bills: bills, payments: payments };
+}
+
+// 統計頁用：所有帳單與所有繳費紀錄
+function allPayments() {
+  const bills = ss().getSheetByName(BILLS_SHEET).getDataRange().getValues().slice(1)
+    .filter(r => r[0] !== '')
+    .map(r => ({
+      id: String(r[0]),
+      name: String(r[1]),
+      type: String(r[2]),
+      period: r[10] === '每年' ? '每年' : '每月',
+      renewMonth: Number(r[11]) || null
+    }));
+  const payments = ss().getSheetByName(PAY_SHEET).getDataRange().getValues().slice(1)
+    .filter(r => r[1] !== '')
+    .map(r => ({
+      month: monthKeyOf(r[0]),
+      id: String(r[1]),
+      amount: Number(r[2]) || 0,
+      paid: isTrue(r[3])
+    }));
+  return { ok: true, bills: bills, payments: payments };
 }
 
 function findRowById(sh, id) {
