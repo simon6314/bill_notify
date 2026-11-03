@@ -82,8 +82,14 @@ function isPaid(bill) {
   return !!(p && p.paid);
 }
 
+// 年繳的帳單只在繳費月份出現；每月的帳單每個月都出現
+function appliesToCurrentMonth(b) {
+  if (b.period !== '每年') return true;
+  return b.renewMonth === Number(state.month.split('-')[1]);
+}
+
 function render() {
-  const active = state.bills.filter(b => b.active);
+  const active = state.bills.filter(b => b.active && appliesToCurrentMonth(b));
   let total = 0, paidTotal = 0, unpaidCount = 0;
   active.forEach(b => {
     const amt = amountOf(b);
@@ -140,7 +146,7 @@ function renderBill(b) {
         <div class="bill-name">${esc(b.name)}</div>
         <div class="badges">${badges}</div>
       </div>
-      <div class="bill-meta">${closeLine}${accountLine}每月 ${b.dueDay || '—'} 號繳款
+      <div class="bill-meta">${closeLine}${accountLine}${b.period === '每年' ? '每年 ' + b.renewMonth + ' 月 ' : '每月 '}${b.dueDay || '—'} 號繳款
         <span class="due-text ${dueCls}">｜${dueText}</span>
       </div>
       ${b.auto ? `<div class="bill-meta auto-note">📌 將於 ${b.dueDay || '—'} 號自動扣繳（請自行確認是否扣款成功）</div>` : ''}
@@ -201,7 +207,7 @@ function renderManage() {
     <div class="manage-item">
       <div>
         <div><strong>${esc(b.name)}</strong>${b.active ? '' : ' <small>（已停用）</small>'}</div>
-        <small>${esc(b.type)}${b.closeDay ? '｜結帳 ' + b.closeDay + ' 號' : ''}｜繳款 ${b.dueDay || '—'} 號${b.account ? '｜' + esc(b.account) : ''}${b.auto ? '｜自動扣繳' : ''}</small>
+        <small>${esc(b.type)}${b.closeDay ? '｜結帳 ' + b.closeDay + ' 號' : ''}｜${b.period === '每年' ? '每年 ' + (b.renewMonth || '—') + ' 月 ' : ''}繳款 ${b.dueDay || '—'} 號${b.account ? '｜' + esc(b.account) : ''}${b.auto ? '｜自動扣繳' : ''}</small>
       </div>
       <div class="btns">
         <button onclick="editBill('${esc(b.id)}')">編輯</button>
@@ -222,14 +228,23 @@ function editBill(id) {
   $('f-account').value = b.account;
   $('f-auto').checked = b.auto;
   $('f-note').value = b.note;
+  $('f-period').value = b.period === '每年' ? '每年' : '每月';
+  $('f-renew').value = b.renewMonth || '';
+  toggleRenewField();
   $('manage').open = true;
   $('f-name').focus();
+}
+
+// 只有「每年」才顯示繳費月份欄位
+function toggleRenewField() {
+  $('f-renew-wrap').style.display = $('f-period').value === '每年' ? '' : 'none';
 }
 
 function resetForm() {
   state.editingId = null;
   $('billForm').reset();
   $('f-id').value = '';
+  toggleRenewField();
 }
 
 async function submitBill(e) {
@@ -243,6 +258,8 @@ async function submitBill(e) {
     dueDay: $('f-due').value,
     account: $('f-account').value.trim(),
     auto: String($('f-auto').checked),
+    period: $('f-period').value,
+    renewMonth: $('f-renew').value,
     active: 'true',
     note: $('f-note').value.trim()
   };

@@ -46,6 +46,13 @@
           <label>結帳日（每月幾號） <input id="f-close" type="number" min="1" max="31"></label>
           <label>繳款日（每月幾號） <input id="f-due" type="number" min="1" max="31"></label>
           <label>扣款帳戶 <input id="f-account" placeholder="例：玉山活存"></label>
+          <label>週期
+            <select id="f-period" onchange="toggleRenewField()">
+              <option value="每月">每月</option>
+              <option value="每年">每年</option>
+            </select>
+          </label>
+          <label id="f-renew-wrap" style="display:none">繳費月份（1–12 月，每年繳才填） <input id="f-renew" type="number" min="1" max="12"></label>
           <label class="check"><input id="f-auto" type="checkbox"> 自動扣繳</label>
           <label>備註 <input id="f-note"></label>
           <div class="form-btns">
@@ -58,6 +65,6 @@
     </section>
   </main>
 
-  <script src="app.js?v=20261103_1110"></script>
+  <script src="app.js?v=20261103_1200"></script>
 </body>
 </html>

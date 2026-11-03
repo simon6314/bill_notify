@@ -1,7 +1,7 @@
 // 帳單管理後端（綁定在「帳單」試算表上：試算表 → 擴充功能 → Apps Script）
 const BILLS_SHEET = '帳單設定';
 const PAY_SHEET = '繳費紀錄';
-const BILL_HEADERS = ['id', '名稱', '類型', '結帳日', '繳款日', '扣款帳戶', '自動扣繳', '預設金額', '啟用', '備註'];
+const BILL_HEADERS = ['id', '名稱', '類型', '結帳日', '繳款日', '扣款帳戶', '自動扣繳', '預設金額', '啟用', '備註', '週期', '繳費月份'];
 const PAY_HEADERS = ['月份', 'bill_id', '金額', '已繳', '更新時間'];
 
 function doGet(e) {
@@ -48,6 +48,10 @@ function ensureSheets() {
     if (sh.getLastRow() === 0) {
       sh.getRange(1, 1, 1, headers.length).setValues([headers]);
       sh.setFrozenRows(1);
+    } else {
+      // 舊的工作表若缺少新欄位（例如「週期」「繳費月份」），補上標題
+      const cur = sh.getRange(1, 1, 1, Math.max(sh.getLastColumn(), headers.length)).getValues()[0];
+      headers.forEach((h, i) => { if (!cur[i]) sh.getRange(1, i + 1).setValue(h); });
     }
   });
 }
@@ -72,7 +76,9 @@ function listData(month) {
       auto: isTrue(r[6]),
       defaultAmount: Number(r[7]) || 0,
       active: r[8] === '' ? true : isTrue(r[8]),
-      note: String(r[9] || '')
+      note: String(r[9] || ''),
+      period: r[10] === '每年' ? '每年' : '每月',
+      renewMonth: Number(r[11]) || null
     }));
 
   const payments = {};
@@ -105,7 +111,9 @@ function saveBill(p) {
     p.auto === 'true',
     Number(p.defaultAmount) || 0,
     p.active === 'false' ? false : true,
-    p.note || ''
+    p.note || '',
+    p.period === '每年' ? '每年' : '每月',
+    p.period === '每年' ? (Number(p.renewMonth) || '') : ''
   ];
   const r = p.id ? findRowById(sh, p.id) : -1;
   if (r > 0) {
@@ -185,6 +193,12 @@ function fmtMD(d) {
   return (d.getMonth() + 1) + '/' + d.getDate();
 }
 
+// 這張帳單在某個月是否需要繳：每月 → 每個月都要；每年 → 只有繳費月份
+function appliesToMonth(b, year, month0) {
+  if (b.period !== '每年') return true;
+  return b.renewMonth === month0 + 1;
+}
+
 function loadBillsAndPayments() {
   const book = ss();
   const bills = book.getSheetByName(BILLS_SHEET).getDataRange().getValues().slice(1)
@@ -197,7 +211,9 @@ function loadBillsAndPayments() {
       dueDay: Number(r[4]) || null,
       account: String(r[5] || ''),
       auto: isTrue(r[6]),
-      active: r[8] === '' ? true : isTrue(r[8])
+      active: r[8] === '' ? true : isTrue(r[8]),
+      period: r[10] === '每年' ? '每年' : '每月',
+      renewMonth: Number(r[11]) || null
     }))
     .filter(b => b.active);
   const pays = {};
@@ -231,8 +247,9 @@ function dailyBillCheck() {
     }
 
     if (!b.dueDay) return;
-    // 檢查本月與下個月的繳款日
+    // 檢查本月與下個月的繳款日（年繳只在繳費月份檢查）
     [new Date(now.getFullYear(), now.getMonth(), 1), new Date(now.getFullYear(), now.getMonth() + 1, 1)].forEach(m => {
+      if (!appliesToMonth(b, m.getFullYear(), m.getMonth())) return;
       const due = dayOnMonth(m.getFullYear(), m.getMonth(), b.dueDay);
       const diff = daysBetween(today, due);
       const p = pays[monthKeyFromDate(due) + '|' + b.id];
@@ -258,4 +275,59 @@ function installBillTrigger() {
     if (t.getHandlerFunction() === 'dailyBillCheck') ScriptApp.deleteTrigger(t);
   });
   ScriptApp.newTrigger('dailyBillCheck').timeBased().everyDays(1).atHour(9).create();
+}
+
+// ══════════════ LINE webhook（記下群組 ID；群組傳「帳單」→ 回覆本月未繳）══════════════
+// LINE 後台的 Webhook URL 設為本專案（帳單）的網址
+function doPost(e) {
+  try {
+    const body = JSON.parse((e && e.postData && e.postData.contents) || '{}');
+    (body.events || []).forEach(handleBillEvent);
+  } catch (err) {
+    console.error(err);
+  }
+  return ContentService.createTextOutput('ok');
+}
+
+function handleBillEvent(ev) {
+  if (!ev.source || ev.source.type !== 'group') return;
+  const props = PropertiesService.getScriptProperties();
+  if (!props.getProperty('GROUP_ID')) props.setProperty('GROUP_ID', ev.source.groupId);
+  if (props.getProperty('GROUP_ID') !== ev.source.groupId) return;
+  if (ev.type !== 'message' || !ev.message || ev.message.type !== 'text') return;
+
+  if (ev.message.text.trim() === '帳單') {
+    replyBillStatus(ev.replyToken);
+  }
+}
+
+function buildUnpaidText() {
+  const { bills, pays } = loadBillsAndPayments();
+  const key = Utilities.formatDate(new Date(), 'Asia/Taipei', 'yyyy-MM');
+  const [y, m] = key.split('-');
+  const lines = [];
+  let total = 0;
+  bills.forEach(b => {
+    if (!appliesToMonth(b, Number(y), Number(m) - 1)) return;
+    const p = pays[key + '|' + b.id];
+    if (p && p.paid) return;
+    const amt = p ? p.amount : null;
+    if (amt) total += amt;
+    const amtText = amt ? '$' + amt.toLocaleString() : '未填金額';
+    const dueText = b.dueDay ? '（' + b.dueDay + ' 號繳款）' : '';
+    lines.push('・' + b.name + '　' + amtText + dueText);
+  });
+  if (!lines.length) return '✅ ' + y + ' 年 ' + Number(m) + ' 月帳單都已繳納';
+  return '🧾 ' + y + ' 年 ' + Number(m) + ' 月未繳帳單\n' + lines.join('\n') + '\n合計（已填金額）：$' + total.toLocaleString();
+}
+
+function replyBillStatus(replyToken) {
+  const token = PropertiesService.getScriptProperties().getProperty('LINE_TOKEN');
+  UrlFetchApp.fetch('https://api.line.me/v2/bot/message/reply', {
+    method: 'post',
+    contentType: 'application/json',
+    headers: { Authorization: 'Bearer ' + token },
+    payload: JSON.stringify({ replyToken: replyToken, messages: [{ type: 'text', text: buildUnpaidText() }] }),
+    muteHttpExceptions: true
+  });
 }
