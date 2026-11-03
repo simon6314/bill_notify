@@ -136,6 +136,7 @@ function renderBill(b) {
       <div class="bill-meta">${closeLine}${accountLine}每月 ${b.dueDay || '—'} 號繳款
         <span class="due-text ${dueCls}">｜${dueText}</span>
       </div>
+      ${b.auto ? `<div class="bill-meta auto-note">📌 將於 ${b.dueDay || '—'} 號自動扣繳（請自行確認是否扣款成功）</div>` : ''}
       ${b.note ? `<div class="bill-meta">${esc(b.note)}</div>` : ''}
       <div class="bill-row">
         <div class="amount-wrap">
