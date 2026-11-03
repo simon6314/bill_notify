@@ -124,7 +124,13 @@ function renderBill(b) {
     b.auto ? '<span class="badge auto">自動扣繳</span>' : ''
   ].join('');
 
-  const closeLine = b.type === '信用卡' && b.closeDay ? `每月 ${b.closeDay} 號結帳｜` : '';
+  // 結帳日比繳款日大（例：25 結帳、次月 10 繳款）→ 本月繳的是「上月」結帳的帳單
+  let closeLine = '';
+  if (b.type === '信用卡' && b.closeDay) {
+    closeLine = b.dueDay && b.closeDay > b.dueDay
+      ? `上月 ${b.closeDay} 號結帳，本月 ${b.dueDay} 號繳款｜`
+      : `每月 ${b.closeDay} 號結帳｜`;
+  }
   const accountLine = b.account ? `扣款：${esc(b.account)}｜` : '';
 
   return `
