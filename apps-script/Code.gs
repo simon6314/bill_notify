@@ -147,3 +147,115 @@ function setPayment(p) {
   sh.getRange(r, 1, 1, row.length).setValues([row]);
   return { ok: true };
 }
+
+// ══════════════ LINE 提醒（每天 09:00 執行）══════════════
+// 需要指令碼屬性：LINE_TOKEN、GROUP_ID（與 webhook 專案相同的群組）
+
+function pushLine(text) {
+  const props = PropertiesService.getScriptProperties();
+  const token = props.getProperty('LINE_TOKEN');
+  const to = props.getProperty('GROUP_ID');
+  if (!token || !to) throw new Error('缺少指令碼屬性 LINE_TOKEN 或 GROUP_ID');
+  const res = UrlFetchApp.fetch('https://api.line.me/v2/bot/message/push', {
+    method: 'post',
+    contentType: 'application/json',
+    headers: { Authorization: 'Bearer ' + token },
+    payload: JSON.stringify({ to: to, messages: [{ type: 'text', text: text }] }),
+    muteHttpExceptions: true
+  });
+  if (res.getResponseCode() !== 200) throw new Error('LINE 推播失敗：' + res.getContentText());
+}
+
+function lastDayOf(y, m) { // m 從 0 開始
+  return new Date(y, m + 1, 0).getDate();
+}
+function dayOnMonth(y, m, day) {
+  return new Date(y, m, Math.min(day, lastDayOf(y, m)));
+}
+function sameDay(a, b) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+function daysBetween(from, to) {
+  return Math.round((to - from) / 86400000);
+}
+function monthKeyFromDate(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+function fmtMD(d) {
+  return (d.getMonth() + 1) + '/' + d.getDate();
+}
+
+function loadBillsAndPayments() {
+  const book = ss();
+  const bills = book.getSheetByName(BILLS_SHEET).getDataRange().getValues().slice(1)
+    .filter(r => r[0] !== '')
+    .map(r => ({
+      id: String(r[0]),
+      name: String(r[1]),
+      type: String(r[2]),
+      closeDay: Number(r[3]) || null,
+      dueDay: Number(r[4]) || null,
+      account: String(r[5] || ''),
+      auto: isTrue(r[6]),
+      active: r[8] === '' ? true : isTrue(r[8])
+    }))
+    .filter(b => b.active);
+  const pays = {};
+  book.getSheetByName(PAY_SHEET).getDataRange().getValues().slice(1).forEach(r => {
+    pays[monthKeyOf(r[0]) + '|' + String(r[1])] = { amount: Number(r[2]) || 0, paid: isTrue(r[3]) };
+  });
+  return { bills: bills, pays: pays };
+}
+
+// 每天 09:00 執行：只在符合條件的那一天發送，不會重複
+function dailyBillCheck() {
+  const { bills, pays } = loadBillsAndPayments();
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yest = new Date(today);
+  yest.setDate(yest.getDate() - 1);
+  const msgs = [];
+
+  bills.forEach(b => {
+    // 1. 信用卡：結帳日過了 1 天，若該期金額還沒填，提醒去確認帳單
+    if (b.type === '信用卡' && b.closeDay) {
+      const stmt = dayOnMonth(yest.getFullYear(), yest.getMonth(), b.closeDay);
+      if (sameDay(stmt, yest)) {
+        const payMonth = (b.dueDay && b.closeDay > b.dueDay)
+          ? new Date(yest.getFullYear(), yest.getMonth() + 1, 1)
+          : new Date(yest.getFullYear(), yest.getMonth(), 1);
+        if (!pays[monthKeyFromDate(payMonth) + '|' + b.id]) {
+          msgs.push('📝 ' + b.name + ' ' + fmtMD(stmt) + ' 結帳，請確認帳單金額，並填在 ' + (payMonth.getMonth() + 1) + ' 月份');
+        }
+      }
+    }
+
+    if (!b.dueDay) return;
+    // 檢查本月與下個月的繳款日
+    [new Date(now.getFullYear(), now.getMonth(), 1), new Date(now.getFullYear(), now.getMonth() + 1, 1)].forEach(m => {
+      const due = dayOnMonth(m.getFullYear(), m.getMonth(), b.dueDay);
+      const diff = daysBetween(today, due);
+      const p = pays[monthKeyFromDate(due) + '|' + b.id];
+
+      // 2. 繳費期限剩 7 天，且尚未勾已繳
+      if (diff === 7 && !(p && p.paid)) {
+        msgs.push('⏰ ' + b.name + ' 繳費期限 ' + fmtMD(due) + '，還有 7 天，請記得繳納');
+      }
+
+      // 3. 自動扣繳：3 天前提醒轉入帳戶（有填金額才提醒）
+      if (diff === 3 && b.auto && p && p.amount > 0) {
+        msgs.push('🏦 ' + fmtMD(due) + ' 自動扣繳 $' + p.amount.toLocaleString() + '（' + b.name + '），請確認已轉入' + (b.account ? ' ' + b.account : ''));
+      }
+    });
+  });
+
+  if (msgs.length) pushLine('🧾 帳單提醒\n' + msgs.join('\n'));
+}
+
+// 執行一次：建立每天 09:00 的檢查
+function installBillTrigger() {
+  ScriptApp.getProjectTriggers().forEach(t => {
+    if (t.getHandlerFunction() === 'dailyBillCheck') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('dailyBillCheck').timeBased().everyDays(1).atHour(9).create();
+}
