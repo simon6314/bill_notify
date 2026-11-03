@@ -1,5 +1,5 @@
 // 把這裡換成 Apps Script 部署後的網址（以 /exec 結尾）
-const API_URL = 'PASTE_APPS_SCRIPT_URL_HERE';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwaXe6NUpewpBWRxUdvb2qG6bdWWt9GfeccEaddtEeQSt--XRa3mQgu4YXTEht9zWUAZg/exec';
 
 const state = {
   month: currentMonthKey(),
