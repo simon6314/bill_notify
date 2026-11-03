@@ -104,7 +104,7 @@ function saveBill(p) {
   const row = [
     id,
     p.name || '',
-    p.type === '信用卡' ? '信用卡' : '定期',
+    ['信用卡', '訂閱'].indexOf(p.type) >= 0 ? p.type : '定期',
     Number(p.closeDay) || '',
     Number(p.dueDay) || '',
     p.account || '',

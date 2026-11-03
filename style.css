@@ -129,3 +129,11 @@ summary { cursor: pointer; font-weight: 600; color: var(--text2); padding: 8px 2
   .bill-form { grid-template-columns: 1fr; }
   .amount-wrap input { width: 120px; }
 }
+
+/* ── 類型篩選 ── */
+.filters { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0 12px; }
+.chip {
+  font-size: 13px; padding: 6px 12px; border-radius: 999px;
+  background: var(--surface); border: 1px solid var(--border); color: var(--text2);
+}
+.chip.active { background: var(--btn); border-color: transparent; color: var(--btn-text); font-weight: 600; }

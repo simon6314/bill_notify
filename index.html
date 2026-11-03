@@ -6,7 +6,7 @@
   <title>帳單管理</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=20261103_1040">
+  <link rel="stylesheet" href="style.css?v=20261103_1210">
 </head>
 <body>
   <header class="header">
@@ -24,6 +24,7 @@
   <main>
     <div id="status" class="status">載入中…</div>
 
+    <div class="filters" id="filters"></div>
     <section class="summary" id="summary"></section>
 
     <section>
@@ -41,6 +42,7 @@
             <select id="f-type">
               <option value="信用卡">信用卡</option>
               <option value="定期">定期繳費</option>
+              <option value="訂閱">訂閱</option>
             </select>
           </label>
           <label>結帳日（每月幾號） <input id="f-close" type="number" min="1" max="31"></label>
@@ -65,6 +67,6 @@
     </section>
   </main>
 
-  <script src="app.js?v=20261103_1200"></script>
+  <script src="app.js?v=20261103_1210"></script>
 </body>
 </html>

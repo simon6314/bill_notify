@@ -88,8 +88,26 @@ function appliesToCurrentMonth(b) {
   return b.renewMonth === Number(state.month.split('-')[1]);
 }
 
+// 類型篩選：全部／信用卡／定期／訂閱
+let typeFilter = '全部';
+const TYPE_FILTERS = ['全部', '信用卡', '定期', '訂閱'];
+
+function setTypeFilter(t) {
+  typeFilter = t;
+  render();
+}
+
+function renderFilters(all) {
+  $('filters').innerHTML = TYPE_FILTERS.map(t => {
+    const n = t === '全部' ? all.length : all.filter(b => b.type === t).length;
+    return `<button class="chip${typeFilter === t ? ' active' : ''}" onclick="setTypeFilter('${t}')">${t}（${n}）</button>`;
+  }).join('');
+}
+
 function render() {
-  const active = state.bills.filter(b => b.active && appliesToCurrentMonth(b));
+  const all = state.bills.filter(b => b.active && appliesToCurrentMonth(b));
+  const active = typeFilter === '全部' ? all : all.filter(b => b.type === typeFilter);
+  renderFilters(all);
   let total = 0, paidTotal = 0, unpaidCount = 0;
   active.forEach(b => {
     const amt = amountOf(b);
@@ -97,7 +115,7 @@ function render() {
     if (isPaid(b)) { if (amt !== null) paidTotal += amt; } else unpaidCount++;
   });
   $('summary').innerHTML = `
-    <div><small>本月應繳</small><strong>${money(total)}</strong></div>
+    <div><small>${typeFilter === '全部' ? '本月應繳' : typeFilter + '應繳'}</small><strong>${money(total)}</strong></div>
     <div><small>已繳</small><strong style="color:var(--ok)">${money(paidTotal)}</strong></div>
     <div><small>未繳</small><strong>${unpaidCount} 筆</strong></div>`;
 
@@ -222,7 +240,7 @@ function editBill(id) {
   state.editingId = id;
   $('f-id').value = b.id;
   $('f-name').value = b.name;
-  $('f-type').value = b.type === '信用卡' ? '信用卡' : '定期';
+  $('f-type').value = ['信用卡', '訂閱'].includes(b.type) ? b.type : '定期';
   $('f-close').value = b.closeDay || '';
   $('f-due').value = b.dueDay || '';
   $('f-account').value = b.account;
