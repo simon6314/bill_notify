@@ -77,7 +77,7 @@ function listData(month) {
 
   const payments = {};
   payRows.forEach(r => {
-    if (String(r[0]) === month) {
+    if (monthKeyOf(r[0]) === month) {
       payments[String(r[1])] = { amount: Number(r[2]) || 0, paid: isTrue(r[3]) };
     }
   });
@@ -123,22 +123,27 @@ function deleteBill(id) {
   return { ok: true };
 }
 
+// 月份統一成 yyyy-MM 字串；試算表若把 "2026-11" 自動轉成日期，這裡會轉回來
+function monthKeyOf(v) {
+  if (v instanceof Date) return Utilities.formatDate(v, 'Asia/Taipei', 'yyyy-MM');
+  return String(v).trim();
+}
+
 // 同一個月份 + 同一筆帳單只會有一列，沒有就新增
 function setPayment(p) {
   const sh = ss().getSheetByName(PAY_SHEET);
   const values = sh.getDataRange().getValues();
   let r = -1;
   for (let i = 1; i < values.length; i++) {
-    if (String(values[i][0]) === p.month && String(values[i][1]) === p.id) {
+    if (monthKeyOf(values[i][0]) === p.month && String(values[i][1]) === p.id) {
       r = i + 1;
       break;
     }
   }
   const row = [p.month, p.id, Number(p.amount) || 0, p.paid === 'true', new Date()];
-  if (r > 0) {
-    sh.getRange(r, 1, 1, row.length).setValues([row]);
-  } else {
-    sh.appendRow(row);
-  }
+  if (r < 0) r = sh.getLastRow() + 1;
+  // A 欄設為純文字，避免 2026-11 被轉成日期
+  sh.getRange(r, 1).setNumberFormat('@');
+  sh.getRange(r, 1, 1, row.length).setValues([row]);
   return { ok: true };
 }
