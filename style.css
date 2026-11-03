@@ -1,7 +1,7 @@
 /* ── 色彩：沿用共同帳本的淺色科技風（青＋粉） ── */
 :root {
-  --bg: #f4f7fb; --surface: rgba(255,255,255,0.72); --surface2: rgba(240,244,250,0.85); --border: rgba(100,116,139,0.22);
-  --text: #0f172a; --text2: #475569; --text3: #64748b;
+  --bg: #f4f7fb; --surface: #ffffff; --surface2: #f1f5f9; --border: #e2e8f0;
+  --text: #0f172a; --text2: #334155; --text3: #64748b;
   --elf: #0e7490; --fox: #be185d;
   --income: #0e7490; --expense: #be185d;
   --ok: #0e7490; --warn: #d97706; --danger: #be185d;
@@ -24,16 +24,22 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body {
   font-family: 'Noto Sans TC', sans-serif; font-size: 15px; line-height: 1.5;
-  background: var(--bg);
-  background-image: linear-gradient(135deg, #fce4ec 0%, #f8bbd9 50%, #ffeeff 100%);
+  background: #f4f7fb;
+  background-image:
+    radial-gradient(circle at 0% 0%, rgba(34,211,238,0.14), transparent 45%),
+    radial-gradient(circle at 100% 0%, rgba(244,114,182,0.12), transparent 45%);
   background-attachment: fixed;
   color: var(--text); min-height: 100vh; -webkit-font-smoothing: antialiased;
 }
-[data-theme="dark"] body, :root[data-theme="dark"] body { background-image: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) body { background-image: none; }
+}
+:root[data-theme="dark"] body { background-image: none; }
 
 /* ── 標題列 ── */
 .header {
-  background: var(--surface); border-bottom: 1px solid var(--border);
+  background: rgba(255,255,255,0.85); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
   padding: 12px 16px; position: sticky; top: 0; z-index: 50;
   display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
 }
@@ -62,32 +68,37 @@ button:disabled { opacity: 0.5; cursor: default; }
 /* ── 摘要 ── */
 .summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 4px 0 18px; }
 .summary div {
-  background: var(--surface); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  background: var(--surface); box-shadow: 0 1px 3px rgba(15,23,42,0.06);
   border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px;
 }
 .summary small { color: var(--text3); display: block; font-size: 13px; }
-.summary strong { font-family: 'DM Mono', monospace; font-size: 20px; font-weight: 500; letter-spacing: -0.02em; }
+.summary strong { font-family: 'DM Mono', monospace; font-size: 20px; font-weight: 500; letter-spacing: -0.02em; color: var(--text); }
+.summary div:first-child strong {
+  background: var(--btn); -webkit-background-clip: text; background-clip: text; color: transparent;
+}
 
 h2 { font-size: 15px; font-weight: 700; margin: 18px 2px 10px; color: var(--text2); }
 .bill-list { display: grid; gap: 10px; }
 
 /* ── 帳單卡片 ── */
 .bill {
-  background: var(--surface); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-  border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px;
+  background: var(--surface); box-shadow: 0 1px 3px rgba(15,23,42,0.06);
+  border: 1px solid var(--border); border-left: 4px solid var(--elf);
+  border-radius: var(--radius); padding: 14px 16px;
   display: grid; gap: 8px; transition: border-color 0.2s;
 }
-.bill.paid { border-color: var(--ok); }
-.bill.overdue { border-color: var(--danger); }
-.bill.soon { border-color: var(--warn); }
+.bill:has(.badge:not(.auto)) { border-left-color: var(--fox); }
+.bill.paid { border-color: var(--ok); border-left-color: var(--ok); background: #f0fdfa; }
+.bill.overdue { border-color: var(--danger); border-left-color: var(--danger); }
+.bill.soon { border-color: var(--warn); border-left-color: var(--warn); }
 .bill-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .bill-name { font-weight: 700; font-size: 16px; }
 .badges { display: flex; gap: 6px; flex-wrap: wrap; }
 .badge {
-  font-size: 12px; border-radius: 999px; padding: 2px 9px;
+  font-size: 12px; font-weight: 500; border-radius: 999px; padding: 2px 9px;
   background: var(--surface2); border: 1px solid var(--border); color: var(--text2);
 }
-.badge.auto { color: var(--elf); border-color: var(--elf); }
+.badge.auto { color: #0e7490; background: rgba(34,211,238,0.14); border-color: transparent; }
 .bill-meta { font-size: 13px; color: var(--text3); }
 .due-text { font-family: 'DM Mono', monospace; }
 .due-text.overdue { color: var(--danger); font-weight: 600; }
@@ -107,7 +118,7 @@ details { margin-top: 26px; }
 summary { cursor: pointer; font-weight: 600; color: var(--text2); padding: 8px 2px; }
 .bill-form {
   display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 10px 0;
-  background: var(--surface); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  background: var(--surface); box-shadow: 0 1px 3px rgba(15,23,42,0.06);
   border: 1px solid var(--border); border-radius: var(--radius); padding: 16px;
 }
 .bill-form label { display: grid; gap: 4px; font-size: 13px; color: var(--text3); }
