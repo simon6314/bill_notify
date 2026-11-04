@@ -277,9 +277,10 @@ function dailyBillCheck() {
       const diff = daysBetween(today, due);
       const p = pays[monthKeyFromDate(due) + '|' + b.id];
 
-      // 2. 繳費期限剩 7 天，且尚未勾已繳
-      if (diff === 7 && !(p && p.paid)) {
-        msgs.push('⏰ ' + b.name + ' 繳費期限 ' + fmtMD(due) + '，還有 7 天，請記得繳納');
+      // 2. 繳費期限前 7 天內，每天提醒，直到勾選已繳
+      if (diff >= 0 && diff <= 7 && !(p && p.paid)) {
+        const left = diff === 0 ? '今天到期' : '還有 ' + diff + ' 天';
+        msgs.push('⏰ ' + b.name + ' 繳費期限 ' + fmtMD(due) + '，' + left + '，請記得繳納');
       }
 
       // 3. 自動扣繳：3 天前提醒轉入帳戶（有填金額才提醒）
