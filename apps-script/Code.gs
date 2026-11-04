@@ -292,24 +292,12 @@ function dailyBillCheck() {
   if (msgs.length) pushLine('🧾 帳單提醒\n' + msgs.join('\n'));
 }
 
-// 每 5 分鐘執行一次：9 點之後、今天還沒發過，就執行一次帳單檢查
-function billTick() {
-  const now = new Date();
-  const hour = Number(Utilities.formatDate(now, 'Asia/Taipei', 'H'));
-  const today = Utilities.formatDate(now, 'Asia/Taipei', 'yyyy-MM-dd');
-  const props = PropertiesService.getScriptProperties();
-  if (hour < 9 || props.getProperty('BILL_SENT_DATE') === today) return;
-  dailyBillCheck();
-  props.setProperty('BILL_SENT_DATE', today);
-}
-
-// 執行一次：建立每 5 分鐘的檢查（實際推播時間約在 9:00–9:05）
+// 執行一次：建立每天 09:00 的檢查
 function installBillTrigger() {
   ScriptApp.getProjectTriggers().forEach(t => {
-    const fn = t.getHandlerFunction();
-    if (fn === 'dailyBillCheck' || fn === 'billTick') ScriptApp.deleteTrigger(t);
+    if (t.getHandlerFunction() === 'dailyBillCheck') ScriptApp.deleteTrigger(t);
   });
-  ScriptApp.newTrigger('billTick').timeBased().everyMinutes(5).create();
+  ScriptApp.newTrigger('dailyBillCheck').timeBased().everyDays(1).atHour(9).create();
 }
 
 // ══════════════ LINE webhook（記下群組 ID；群組傳「帳單」→ 回覆本月未繳）══════════════
