@@ -4,7 +4,8 @@
   --text: #0f172a; --text2: #1e293b; --text3: #475569;
   --elf: #0e7490; --fox: #be185d;
   --income: #0e7490; --expense: #be185d;
-  --ok: #0e7490; --warn: #d97706; --danger: #be185d;
+  --ok: #16a34a; --warn: #d97706; --danger: #dc2626;
+  --st-todo: #2563eb; --st-paid: #16a34a; --st-soon: #d97706; --st-over: #dc2626;
   --radius: 12px; --radius-sm: 8px;
   --btn: linear-gradient(135deg, #22d3ee, #f472b6); --btn-text: #0b1220;
 }
@@ -67,14 +68,14 @@ h2 { font-size: 15px; font-weight: 700; margin: 18px 2px 10px; color: var(--text
 /* ── 帳單卡片 ── */
 .bill {
   background: var(--surface); box-shadow: 0 1px 2px rgba(15,23,42,0.04), 0 12px 28px -18px rgba(15,23,42,0.35);
-  border: 1px solid var(--border); border-left: 4px solid var(--elf);
+  border: 1px solid var(--border); border-left: 4px solid var(--st-todo);
   border-radius: var(--radius); padding: 14px 16px;
   display: grid; gap: 8px; transition: border-color 0.2s;
 }
-.bill:has(.badge:not(.auto)) { border-left-color: var(--fox); }
-.bill.paid { border-color: var(--ok); border-left-color: var(--ok); }
-.bill.overdue { border-color: var(--danger); border-left-color: var(--danger); }
-.bill.soon { border-color: var(--warn); border-left-color: var(--warn); }
+/* 狀態顏色：未繳（藍）、即將到期（橘）、已逾期（紅）、已繳（綠） */
+.bill.paid { border-color: rgba(22,163,74,0.35); border-left-color: var(--st-paid); }
+.bill.soon { border-color: rgba(217,119,6,0.35); border-left-color: var(--st-soon); }
+.bill.overdue { border-color: rgba(220,38,38,0.35); border-left-color: var(--st-over); }
 .bill-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .bill-name { font-weight: 700; font-size: 16px; }
 .badges { display: flex; gap: 6px; flex-wrap: wrap; }
