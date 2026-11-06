@@ -102,15 +102,20 @@ function allPayments() {
       period: r[10] === '每年' ? '每年' : '每月',
       renewMonth: Number(r[11]) || null
     }));
-  const payments = ss().getSheetByName(PAY_SHEET).getDataRange().getValues().slice(1)
+  // 同一個月份 + 同一筆帳單若有多列（舊資料），只取最後一列，與帳單頁 listData 一致
+  const byKey = {};
+  ss().getSheetByName(PAY_SHEET).getDataRange().getValues().slice(1)
     .filter(r => r[1] !== '')
-    .map(r => ({
-      month: monthKeyOf(r[0]),
-      id: String(r[1]),
-      amount: Number(r[2]) || 0,
-      paid: isTrue(r[3])
-    }));
-  return { ok: true, bills: bills, payments: payments };
+    .forEach(r => {
+      const month = monthKeyOf(r[0]);
+      byKey[month + '|' + String(r[1])] = {
+        month: month,
+        id: String(r[1]),
+        amount: Number(r[2]) || 0,
+        paid: isTrue(r[3])
+      };
+    });
+  return { ok: true, bills: bills, payments: Object.values(byKey) };
 }
 
 function findRowById(sh, id) {
@@ -165,7 +170,7 @@ function setPayment(p) {
   const sh = ss().getSheetByName(PAY_SHEET);
   const values = sh.getDataRange().getValues();
   let r = -1;
-  for (let i = 1; i < values.length; i++) {
+  for (let i = values.length - 1; i >= 1; i--) { // 從最後一列找，與帳單頁顯示的值一致
     if (monthKeyOf(values[i][0]) === p.month && String(values[i][1]) === p.id) {
       r = i + 1;
       break;
@@ -177,6 +182,22 @@ function setPayment(p) {
   sh.getRange(r, 1).setNumberFormat('@');
   sh.getRange(r, 1, 1, row.length).setValues([row]);
   return { ok: true };
+}
+
+// 一次性清理：刪除「同月份 + 同帳單」的重複列，只保留最後一列。
+// 在 Apps Script 編輯器手動執行一次即可；執行前會回傳將刪除的列數，請先確認。
+function removeDuplicatePayments() {
+  const sh = ss().getSheetByName(PAY_SHEET);
+  const values = sh.getDataRange().getValues();
+  const seen = {};
+  const toDelete = [];
+  for (let i = values.length - 1; i >= 1; i--) { // 從底部往上，先遇到的是最後一列
+    if (values[i][1] === '') continue;
+    const key = monthKeyOf(values[i][0]) + '|' + String(values[i][1]);
+    if (seen[key]) toDelete.push(i + 1); else seen[key] = true;
+  }
+  toDelete.forEach(row => sh.deleteRow(row)); // 已由下往上排序，刪除不會影響其他列號
+  return { ok: true, deleted: toDelete.length };
 }
 
 // ══════════════ LINE 提醒（每天 09:00 執行）══════════════
